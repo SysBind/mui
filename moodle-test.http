@@ -1,0 +1,5 @@
+GET http://localhost:8080/webservice/restful/server.php/core_course_get_courses
+AUTHORIZATION: e786e74631683916cc4cc277707ad5c3
+CONTENT_TYPE: json
+ACCEPT: application/json
+{"options": {"ids": ["1"]}}
