@@ -23,7 +23,7 @@ main =
 
 -- MODEL
 
-type alias School = { shortname: String, fullname: String }
+type alias School = { sitename: String }
 
 type Model = Failure String
            | Loading
@@ -37,11 +37,11 @@ init _ =
   ( Loading
   , Http.request
       { method = "GET"
-      , headers = [ Http.header "CONTENT_TYPE" "json"
+      , headers = [ Http.header "CONTENT_TYPE" "application/urlencoded"
                   , Http.header "ACCEPT" "application/json"
-                  , Http.header "AUTHORIZATION" "e786e74631683916cc4cc277707ad5c3" ]
-      , url = "http://localhost:8080/webservice/restful/server.php/core_course_get_courses"
-      , body = Http.jsonBody (Encode.object [ ( "options", Encode.string "tom" ) ])
+                  , Http.header "AUTHORIZATION" "8410c8268bfa0a3dc1e0ed8fb15aed86" ]
+      , url = "http://localhost:8080/webservice/restful/server.php/core_webservice_get_site_info?serviceshortnames[]=x"
+      , body = Http.emptyBody
       , expect = Http.expectJson GotSchool schoolDecoder
       , timeout = Nothing
       , tracker = Nothing    
@@ -50,10 +50,9 @@ init _ =
 
 schoolDecoder : Decoder School
 schoolDecoder =
-    Json.Decode.map2
+    Json.Decode.map
         School
-        (field "shortname" string)
-        (field "fullname" string)
+        (field "sitename" string)
 
 -- UPDATE
 
@@ -104,5 +103,5 @@ view model =
 
         Success school ->
             div []
-                [ text (school.fullname ++ " <" ++ school.shortname ++ ">" ) ]
+                [ text (school.sitename) ]
 

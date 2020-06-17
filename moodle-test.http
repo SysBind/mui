@@ -1,6 +1,9 @@
+; -*- mode: restclient;-*-
+
+
 # GET Request with Body
 GET http://localhost:8080/webservice/restful/server.php/core_course_get_courses
-AUTHORIZATION: e786e74631683916cc4cc277707ad5c3
+AUTHORIZATION: 8410c8268bfa0a3dc1e0ed8fb15aed86
 CONTENT_TYPE: application/json
 ACCEPT: application/json
 {"options": {"ids": ["1"]}}
@@ -10,7 +13,14 @@ ACCEPT: application/json
 
 # GET with URL Encoded params
 GET http://localhost:8080/webservice/restful/server.php/core_course_get_courses?options[ids][]=1
-AUTHORIZATION: e786e74631683916cc4cc277707ad5c3
+AUTHORIZATION: 8410c8268bfa0a3dc1e0ed8fb15aed86
 ACCEPT: application/json
 CONTENT_TYPE: application/urlencoded
 
+
+
+# Site Info
+GET http://localhost:8080/webservice/restful/server.php/core_webservice_get_site_info?serviceshortnames[]=x
+AUTHORIZATION: 8410c8268bfa0a3dc1e0ed8fb15aed86
+ACCEPT: application/json
+CONTENT_TYPE: application/urlencoded
