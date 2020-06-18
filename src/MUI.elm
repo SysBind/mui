@@ -23,7 +23,7 @@ main =
 
 -- MODEL
 
-type alias SiteInfo = { sitename: String, userid: Int }
+type alias School = { sitename: String }
     
 type Model = Failure String
            | Loading
