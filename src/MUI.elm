@@ -7,6 +7,8 @@ import Http
 import Json.Decode exposing (Decoder, field, string)
 import Json.Encode as Encode
 import Array
+import Material.TopAppBar as TopAppBar
+import Material.IconButton as IconButton
 
 
 -- MAIN
@@ -102,6 +104,18 @@ view model =
             text "Loading..."
 
         Success school ->
-            div []
-                [ text (school.sitename) ]
+            TopAppBar.regular TopAppBar.config
+                [ TopAppBar.row []
+                      [ TopAppBar.section [ TopAppBar.alignStart ]
+                            [ IconButton.iconButton
+                                  (IconButton.config
+                                  |> IconButton.setAttributes
+                                       [ TopAppBar.navigationIcon ]
+                                  )
+                                  "menu"
+                            , Html.span [ TopAppBar.title ]
+                                [ text school.sitename ]
+                            ]
+                      ]
+                ]
 
