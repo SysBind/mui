@@ -1,7 +1,7 @@
-module Rest exposing (..)
+module Rest exposing (request)
 
 import Http
-import Json.Decode exposing (Decoder, field, string)
+import Json.Decode exposing (Decoder, field, string, int)
 import Types exposing (..)
 
 
@@ -14,14 +14,17 @@ request =
                           , Http.header "AUTHORIZATION" "8410c8268bfa0a3dc1e0ed8fb15aed86" ]
               , url = "http://localhost:8080/webservice/restful/server.php/core_webservice_get_site_info?serviceshortnames[]=x"
               , body = Http.emptyBody
-              , expect = Http.expectJson GotSchool schoolDecoder
+              , expect = Http.expectJson GotSiteInfo siteInfoDecoder
               , timeout = Nothing
               , tracker = Nothing    
               }
 
-schoolDecoder : Decoder School
-schoolDecoder =
-    Json.Decode.map
-        School
+siteInfoDecoder : Decoder SiteInfo
+siteInfoDecoder =
+    Json.Decode.map4        
+        SiteInfo
         (field "sitename" string)
+        (field "username" string)
+        (field "fullname" string)
+        (field "userid" int)
               

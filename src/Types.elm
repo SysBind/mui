@@ -2,12 +2,12 @@ module Types exposing (..)
 
 import Http
 
-type alias School = { sitename: String }
+type alias SiteInfo = { sitename: String, username: String, fullname: String, userid: Int }
     
 type Model = Failure String
            | Loading
-           | Success School
+           | Success SiteInfo
 
 type Msg
-  = GotSchool (Result Http.Error School)
+  = GotSiteInfo (Result Http.Error SiteInfo)
              

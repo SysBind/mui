@@ -2,7 +2,7 @@ module State exposing (..)
 
 import Http
 import Types exposing (..)
-import Rest exposing (..)
+import Rest exposing (request)
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
@@ -20,10 +20,10 @@ init _ =
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
-    GotSchool result ->
+    GotSiteInfo result ->
       case result of
-        Ok school ->
-          (Success school, Cmd.none)
+        Ok siteInfo ->
+          (Success siteInfo, Cmd.none)
 
         Err reason ->
             case reason of
