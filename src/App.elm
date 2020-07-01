@@ -19,16 +19,21 @@ main =
     }
 
 
+authToken = "8410c8268bfa0a3dc1e0ed8fb15aed86"  
  
 -- MODEL
 
 type alias SiteInfo = { sitename: String, username: String, fullname: String, userid: Int }
+type alias Course = { id: Int, shortname: String, fullname: String }
+type alias Courses = List Course
     
 type Model = Failure String
            | Loading
-           | Success SiteInfo
+           | LoadedSiteInfo SiteInfo
+           | LoadedCourses Courses
 
 type Msg = GotSiteInfo (Result Http.Error SiteInfo)
+         | GotCourses (Result Http.Error Courses)
 
 
 -- UPDATE
@@ -40,16 +45,16 @@ subscriptions model =
 init : () -> (Model, Cmd Msg)
 init _ =
   ( Loading
-  , request
+  , siteInfoRequest
   )
 
-request : Cmd Msg
-request =         
+siteInfoRequest : Cmd Msg
+siteInfoRequest =         
           Http.request
               { method = "GET"
               , headers = [ Http.header "CONTENT_TYPE" "application/urlencoded"
                           , Http.header "ACCEPT" "application/json"
-                          , Http.header "AUTHORIZATION" "8410c8268bfa0a3dc1e0ed8fb15aed86" ]
+                          , Http.header "AUTHORIZATION" authToken ]
               , url = "http://localhost:8080/webservice/restful/server.php/core_webservice_get_site_info?serviceshortnames[]=x"
               , body = Http.emptyBody
               , expect = Http.expectJson GotSiteInfo siteInfoDecoder
@@ -67,14 +72,59 @@ siteInfoDecoder =
         (field "userid" int)
 
 
+
+
+courseListRequest : Cmd Msg
+courseListRequest =         
+          Http.request
+              { method = "GET"
+              , headers = [ Http.header "CONTENT_TYPE" "application/urlencoded"
+                          , Http.header "ACCEPT" "application/json"
+                          , Http.header "AUTHORIZATION" authToken ]
+              , url = "http://localhost:8080/webservice/restful/server.php/core_enrol_get_users_courses?userid=3"
+              , body = Http.emptyBody
+              , expect = Http.expectJson GotCourses courseListDecoder
+              , timeout = Nothing
+              , tracker = Nothing
+              }
+
+courseDecoder : Decoder Course
+courseDecoder =
+    Json.Decode.map3
+        Course
+        (field "id" int)
+        (field "shortname" string)
+        (field "fullname" string)
+    
+courseListDecoder : Decoder Courses
+courseListDecoder =
+    Json.Decode.list courseDecoder
+
+
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     GotSiteInfo result ->
       case result of
         Ok siteInfo ->
-          (Success siteInfo, Cmd.none)
-
+          (LoadedSiteInfo siteInfo, courseListRequest)
+        Err reason ->
+            case reason of
+                Http.BadUrl str ->
+                    (Failure ("BADURL " ++ str), Cmd.none)
+                Http.Timeout ->
+                    (Failure "TIMEOUT", Cmd.none)
+                Http.NetworkError ->
+                    (Failure "NETWORKERROR", Cmd.none)
+                Http.BadStatus status ->
+                    (Failure ("BADSTATYS" ++ String.fromInt status), Cmd.none)
+                Http.BadBody str ->
+                    (Failure ("BADBODY " ++ str), Cmd.none)                
+              
+    GotCourses result ->
+      case result of
+        Ok courses ->
+            (LoadedCourses courses, Cmd.none)
         Err reason ->
             case reason of
                 Http.BadUrl str ->
@@ -101,7 +151,7 @@ rootView model =
         Loading ->
             text "Loading..."
 
-        Success siteInfo ->
+        LoadedSiteInfo siteInfo ->
             TopAppBar.regular (TopAppBar.config |> TopAppBar.setDense True)
             [ TopAppBar.row []
                 [ TopAppBar.section
@@ -124,4 +174,7 @@ rootView model =
                     ]
                 ]
             ]
+
+        LoadedCourses courses ->
+             text "Courses"
                         
