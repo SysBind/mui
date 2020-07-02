@@ -3,50 +3,59 @@ module App exposing (main)
 import Browser
 import Material.TopAppBar as TopAppBar
 import Material.IconButton as IconButton
+import Material.Snackbar as Snackbar
 import Html exposing (..)
 import Html.Attributes exposing (style)
 import Http
 import Json.Decode exposing (Decoder, field, string, int)
 
--- MAIN
 
-main =
-  Browser.element
-    { init = init
-    , update = update
-    , subscriptions = subscriptions
-    , view = rootView
+authToken = "8410c8268bfa0a3dc1e0ed8fb15aed86"
+
+-- MODEL
+
+type alias SiteInfo = {
+        sitename: String,
+        username: String,
+        userfullname: String,
+        userid: Int
+    }
+
+type alias Course = {
+        id: Int,
+        shortname: String,
+        fullname: String
+    }
+
+type alias Courses = List Course
+
+type alias Model = {
+        siteinfo: Maybe SiteInfo,
+        courses: Maybe Courses,        
+        messages: Snackbar.Queue Msg,
+        debug: Maybe String
     }
 
 
-authToken = "8410c8268bfa0a3dc1e0ed8fb15aed86"  
- 
--- MODEL
+type Msg = SiteInfoLoaded  (Result Http.Error SiteInfo)
+         | SnackbarMsg (Snackbar.Msg Msg)
+--         | CoursesLoaded
 
-type alias SiteInfo = { sitename: String, username: String, fullname: String, userid: Int }
-type alias Course = { id: Int, shortname: String, fullname: String }
-type alias Courses = List Course
+init : () -> (Model, Cmd Msg)
+init _ =
+  ( { siteinfo = Nothing,
+      courses = Nothing,
+      messages = Snackbar.initialQueue,
+      debug = Nothing
+    }
+  , siteInfoRequest
+  )
     
-type Model = Failure String
-           | Loading
-           | LoadedSiteInfo SiteInfo
-           | LoadedCourses Courses
-
-type Msg = GotSiteInfo (Result Http.Error SiteInfo)
-         | GotCourses (Result Http.Error Courses)
-
-
 -- UPDATE
 
 subscriptions : Model -> Sub Msg
 subscriptions model =
   Sub.none
-      
-init : () -> (Model, Cmd Msg)
-init _ =
-  ( Loading
-  , siteInfoRequest
-  )
 
 siteInfoRequest : Cmd Msg
 siteInfoRequest =         
@@ -57,7 +66,7 @@ siteInfoRequest =
                           , Http.header "AUTHORIZATION" authToken ]
               , url = "http://localhost:8080/webservice/restful/server.php/core_webservice_get_site_info?serviceshortnames[]=x"
               , body = Http.emptyBody
-              , expect = Http.expectJson GotSiteInfo siteInfoDecoder
+              , expect = Http.expectJson SiteInfoLoaded siteInfoDecoder
               , timeout = Nothing
               , tracker = Nothing    
               }
@@ -73,7 +82,7 @@ siteInfoDecoder =
 
 
 
-
+{--
 courseListRequest : Cmd Msg
 courseListRequest =         
           Http.request
@@ -100,81 +109,96 @@ courseListDecoder : Decoder Courses
 courseListDecoder =
     Json.Decode.list courseDecoder
 
+--}
 
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
-    GotSiteInfo result ->
+    SiteInfoLoaded result ->
       case result of
         Ok siteInfo ->
-          (LoadedSiteInfo siteInfo, courseListRequest)
+           ( { model | siteinfo = Just siteInfo }, Cmd.none )          
         Err reason ->
-            case reason of
-                Http.BadUrl str ->
-                    (Failure ("BADURL " ++ str), Cmd.none)
-                Http.Timeout ->
-                    (Failure "TIMEOUT", Cmd.none)
-                Http.NetworkError ->
-                    (Failure "NETWORKERROR", Cmd.none)
-                Http.BadStatus status ->
-                    (Failure ("BADSTATYS" ++ String.fromInt status), Cmd.none)
-                Http.BadBody str ->
-                    (Failure ("BADBODY " ++ str), Cmd.none)                
-              
-    GotCourses result ->
-      case result of
-        Ok courses ->
-            (LoadedCourses courses, Cmd.none)
-        Err reason ->
-            case reason of
-                Http.BadUrl str ->
-                    (Failure ("BADURL " ++ str), Cmd.none)
-                Http.Timeout ->
-                    (Failure "TIMEOUT", Cmd.none)
-                Http.NetworkError ->
-                    (Failure "NETWORKERROR", Cmd.none)
-                Http.BadStatus status ->
-                    (Failure ("BADSTATYS" ++ String.fromInt status), Cmd.none)
-                Http.BadBody str ->
-                    (Failure ("BADBODY " ++ str), Cmd.none)
-      
-    
+             let
+                message =
+                    case reason of
+                        Http.BadUrl str ->
+                            Snackbar.message
+                                |> Snackbar.setLabel (Just ("BADURL " ++ str))
+                        Http.Timeout ->
+                            Snackbar.message
+                                |> Snackbar.setLabel (Just "TIMEOUT")
+                        Http.NetworkError ->
+                            Snackbar.message
+                                |> Snackbar.setLabel (Just "NETWORKERROR")
+                        Http.BadStatus status ->
+                            Snackbar.message
+                                |> Snackbar.setLabel (Just ("BADSTATUS " ++ String.fromInt status))
+                        Http.BadBody str ->
+                            Snackbar.message
+                                |> Snackbar.setLabel (Just ("BADBODY " ++ str))
+             in
+                 ( model, Snackbar.addMessage SnackbarMsg message )
+
+    SnackbarMsg snackbarMsg ->
+        Snackbar.update SnackbarMsg snackbarMsg model.messages
+                |> Tuple.mapFirst (\queue -> { model | messages = queue })
 
 -- VIEW                        
 
+siteName : Model -> String
+siteName model =
+    case model.siteinfo of
+        Nothing ->
+            "Loading"
+        Just siteinfo ->
+            siteinfo.sitename
+
+printDebug : Model -> String
+printDebug model =
+    case model.debug of
+        Nothing ->
+            ""
+        Just str ->
+            str
+             
+
 rootView : Model -> Html Msg
 rootView model =
-    case model of
-        Failure reason ->
-            text ("Error connecting to API - " ++ reason)
-
-        Loading ->
-            text "Loading..."
-
-        LoadedSiteInfo siteInfo ->
-            TopAppBar.regular (TopAppBar.config |> TopAppBar.setDense True)
-            [ TopAppBar.row []
-                [ TopAppBar.section
+    div [] [
+     TopAppBar.regular (TopAppBar.config |> TopAppBar.setDense True)
+        [ TopAppBar.row []
+              [ TopAppBar.section
                     [ TopAppBar.alignStart ]
                     [ IconButton.iconButton
-                        (IconButton.config
-                            |> IconButton.setAttributes [ TopAppBar.navigationIcon ]
-                        )
-                        "menu"
-                    , Html.span [ TopAppBar.title ] [ text siteInfo.sitename ]
+                          (IconButton.config
+                          |> IconButton.setAttributes [ TopAppBar.navigationIcon ]
+                          )
+                          "menu"
+                    , Html.span [ TopAppBar.title ] [ text (siteName model) ]
                     ]
-                , TopAppBar.section
-                    [ TopAppBar.alignEnd ]
-                    [  Html.span [ TopAppBar.title ] [ text siteInfo.fullname ]
-                    ,IconButton.iconButton
-                        (IconButton.config
-                            |> IconButton.setAttributes [ TopAppBar.actionItem ]
-                        )
-                        "account_box"
-                    ]
-                ]
-            ]
+              , TopAppBar.section
+                  [ TopAppBar.alignEnd ]
+                  [  Html.span [ TopAppBar.title ] [ text (printDebug model) ]
+                  ,IconButton.iconButton
+                      (IconButton.config
+                      |> IconButton.setAttributes [ TopAppBar.actionItem ]
+                      )
+                         "account_box"
+                  ]
+              ]              
+        ]
+        , Snackbar.snackbar SnackbarMsg Snackbar.config model.messages
 
-        LoadedCourses courses ->
-             text "Courses"
-                        
+    ]
+
+-- MAIN
+
+main =
+  Browser.element
+    { init = init
+    , update = update
+    , subscriptions = subscriptions
+    , view = rootView
+    }
+ 
