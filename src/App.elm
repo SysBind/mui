@@ -4,6 +4,7 @@ import Browser
 import Material.TopAppBar as TopAppBar
 import Material.IconButton as IconButton
 import Material.Snackbar as Snackbar
+import Material.Card as Card
 import Html exposing (..)
 import Html.Attributes exposing (style)
 import Http
@@ -38,8 +39,8 @@ type alias Model = {
 
 
 type Msg = SiteInfoLoaded  (Result Http.Error SiteInfo)
+         | CoursesLoaded  (Result Http.Error Courses)
          | SnackbarMsg (Snackbar.Msg Msg)
---         | CoursesLoaded
 
 init : () -> (Model, Cmd Msg)
 init _ =
@@ -80,19 +81,18 @@ siteInfoDecoder =
         (field "fullname" string)
         (field "userid" int)
 
+    
 
-
-{--
-courseListRequest : Cmd Msg
-courseListRequest =         
+courseListRequest : Int -> (Cmd Msg)
+courseListRequest userid =         
           Http.request
               { method = "GET"
               , headers = [ Http.header "CONTENT_TYPE" "application/urlencoded"
                           , Http.header "ACCEPT" "application/json"
                           , Http.header "AUTHORIZATION" authToken ]
-              , url = "http://localhost:8080/webservice/restful/server.php/core_enrol_get_users_courses?userid=3"
+              , url = "http://localhost:8080/webservice/restful/server.php/core_enrol_get_users_courses?userid=" ++ String.fromInt userid
               , body = Http.emptyBody
-              , expect = Http.expectJson GotCourses courseListDecoder
+              , expect = Http.expectJson CoursesLoaded courseListDecoder
               , timeout = Nothing
               , tracker = Nothing
               }
@@ -109,36 +109,47 @@ courseListDecoder : Decoder Courses
 courseListDecoder =
     Json.Decode.list courseDecoder
 
---}
 
+        
+errSnack : Http.Error -> Model -> (Model, Cmd Msg)
+errSnack reason model =
+    let
+        message =
+            case reason of
+                Http.BadUrl str ->
+                    Snackbar.message
+                        |> Snackbar.setLabel (Just ("BADURL " ++ str))
+                Http.Timeout ->
+                    Snackbar.message
+                        |> Snackbar.setLabel (Just "TIMEOUT")
+                Http.NetworkError ->
+                    Snackbar.message
+                        |> Snackbar.setLabel (Just "NETWORKERROR")
+                Http.BadStatus status ->
+                    Snackbar.message
+                        |> Snackbar.setLabel (Just ("BADSTATUS " ++ String.fromInt status))
+                Http.BadBody str ->
+                    Snackbar.message
+                        |> Snackbar.setLabel (Just ("BADBODY " ++ str))
+    in
+        (model, Snackbar.addMessage SnackbarMsg message)
+
+    
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
     SiteInfoLoaded result ->
       case result of
         Ok siteInfo ->
-           ( { model | siteinfo = Just siteInfo }, Cmd.none )          
+           ( { model | siteinfo = Just siteInfo }, courseListRequest siteInfo.userid )
         Err reason ->
-             let
-                message =
-                    case reason of
-                        Http.BadUrl str ->
-                            Snackbar.message
-                                |> Snackbar.setLabel (Just ("BADURL " ++ str))
-                        Http.Timeout ->
-                            Snackbar.message
-                                |> Snackbar.setLabel (Just "TIMEOUT")
-                        Http.NetworkError ->
-                            Snackbar.message
-                                |> Snackbar.setLabel (Just "NETWORKERROR")
-                        Http.BadStatus status ->
-                            Snackbar.message
-                                |> Snackbar.setLabel (Just ("BADSTATUS " ++ String.fromInt status))
-                        Http.BadBody str ->
-                            Snackbar.message
-                                |> Snackbar.setLabel (Just ("BADBODY " ++ str))
-             in
-                 ( model, Snackbar.addMessage SnackbarMsg message )
+            errSnack reason model
+    CoursesLoaded result ->
+      case result of
+        Ok courses ->
+           ( { model | courses = Just courses }, Cmd.none )          
+        Err reason ->
+            errSnack reason model
 
     SnackbarMsg snackbarMsg ->
         Snackbar.update SnackbarMsg snackbarMsg model.messages
@@ -154,6 +165,15 @@ siteName model =
         Just siteinfo ->
             siteinfo.sitename
 
+userName : Model -> String
+userName model =
+    case model.siteinfo of
+        Nothing ->
+            "Loading"
+        Just siteinfo ->
+            siteinfo.userfullname
+
+                
 printDebug : Model -> String
 printDebug model =
     case model.debug of
@@ -163,6 +183,26 @@ printDebug model =
             str
              
 
+justList : Maybe (List a) -> List a
+justList list =
+    case list of
+        Nothing ->
+            []
+        Just list_ ->
+            list_
+
+courseCard : Course -> Html msg
+courseCard course =
+    Card.card
+    (Card.config |> Card.setOutlined True)
+    { blocks =
+        [ Card.block <|
+            Html.div [] [ Html.h1 [] [ text course.shortname ] ]
+        ]
+    , actions = Nothing
+    }
+    
+                
 rootView : Model -> Html Msg
 rootView model =
     div [] [
@@ -179,7 +219,7 @@ rootView model =
                     ]
               , TopAppBar.section
                   [ TopAppBar.alignEnd ]
-                  [  Html.span [ TopAppBar.title ] [ text (printDebug model) ]
+                  [  Html.span [ TopAppBar.title ] [ text (userName model) ]
                   ,IconButton.iconButton
                       (IconButton.config
                       |> IconButton.setAttributes [ TopAppBar.actionItem ]
@@ -188,6 +228,8 @@ rootView model =
                   ]
               ]              
         ]
+        , div[]
+            (List.map (\c ->  courseCard c ) (justList model.courses))
         , Snackbar.snackbar SnackbarMsg Snackbar.config model.messages
 
     ]
