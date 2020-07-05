@@ -9,6 +9,8 @@ import Material.LayoutGrid as LayoutGrid
 import Material.Elevation as Elevation
 import Material.List as List
 import Material.List.Item as ListItem
+import Material.ImageList as ImageList
+import Material.ImageList.Item as ImageListItem
 import Html exposing (..)
 import Html.Attributes exposing (style)
 import Http
@@ -20,25 +22,32 @@ authToken = "8410c8268bfa0a3dc1e0ed8fb15aed86"
 -- MODEL
 
 type alias SiteInfo = {
-        sitename: String,
-        username: String,
-        userfullname: String,
-        userid: Int
+        sitename: String
+        ,username: String
+        ,userfullname: String
+        ,userid: Int
     }
 
+type alias OverviewFile = {
+        filename: String
+        ,fileurl: String
+        ,mimetype: String
+    }
+    
 type alias Course = {
-        id: Int,
-        shortname: String,
-        fullname: String
+        id: Int
+        ,shortname: String
+        ,fullname: String
+        ,overviewfiles: List OverviewFile
     }
 
 type alias Courses = List Course
 
 type alias Model = {
-        siteinfo: Maybe SiteInfo,
-        courses: Maybe Courses,        
-        messages: Snackbar.Queue Msg,
-        debug: Maybe String
+        siteinfo: Maybe SiteInfo
+        ,courses: Maybe Courses       
+        ,messages: Snackbar.Queue Msg
+        ,debug: Maybe String
     }
 
 
@@ -103,11 +112,20 @@ courseListRequest userid =
 
 courseDecoder : Decoder Course
 courseDecoder =
-    Json.Decode.map3
+    Json.Decode.map4
         Course
         (field "id" int)
         (field "shortname" string)
         (field "fullname" string)
+        (field "overviewfiles" (Json.Decode.list overviewfileDecoder))
+
+overviewfileDecoder : Decoder OverviewFile
+overviewfileDecoder =
+    Json.Decode.map3
+        OverviewFile
+        (field "filename" string)
+        (field "fileurl" string)
+        (field "mimetype" string)
     
 courseListDecoder : Decoder Courses
 courseListDecoder =
@@ -202,7 +220,18 @@ courseCard course =
             (Card.config |> Card.setOutlined True)
             { blocks =
                   [ Card.block <|
-                        Html.div [] [ Html.h1 [] [ text course.shortname ] ]
+                        Html.div [] [ Html.h1 [] [ text course.shortname ]
+                                    , ImageList.imageList ImageList.config
+                                        [ ImageListItem.imageListItem
+                                              (ImageListItem.config
+                                              |> ImageListItem.setAttributes
+                                                   [ style "width" "calc(100% / 5 - 4px)"
+                                                   , style "margin" "2px"
+                                                   ]
+                                              )
+                                              "http://localhost:8080/webservice/pluginfile.php/26/course/overviewfiles/cat.jpg"
+                                        ]
+                                    ]
                   ]
             , actions = Nothing
             })]
