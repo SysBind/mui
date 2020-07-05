@@ -13,6 +13,7 @@ import Material.ImageList as ImageList
 import Material.ImageList.Item as ImageListItem
 import Html exposing (..)
 import Html.Attributes exposing (style)
+import Html.Events
 import Http
 import Json.Decode exposing (Decoder, field, string, int)
 
@@ -53,6 +54,7 @@ type alias Model = {
 
 type Msg = SiteInfoLoaded  (Result Http.Error SiteInfo)
          | CoursesLoaded  (Result Http.Error Courses)
+         | CardClicked
          | SnackbarMsg (Snackbar.Msg Msg)
 
 init : () -> (Model, Cmd Msg)
@@ -172,6 +174,9 @@ update msg model =
            ( { model | courses = Just courses }, Cmd.none )          
         Err reason ->
             errSnack reason model
+                
+    CardClicked ->
+        ( model, Cmd.none )
 
     SnackbarMsg snackbarMsg ->
         Snackbar.update SnackbarMsg snackbarMsg model.messages
@@ -224,16 +229,19 @@ courseImage image =
         )
     (image.fileurl ++ "?token=" ++ authToken)
               
-courseCard : Course -> Html msg
+courseCard : Course -> Html Msg
 courseCard course =
     LayoutGrid.cell [ Elevation.z2 ]
         [(Card.card
             (Card.config |> Card.setOutlined True)
             { blocks =
+                  Card.primaryAction
+                  [ Html.Events.onClick CardClicked ]
                   [ Card.block <|
-                        Html.div [] [ Html.h1 [] [ text course.shortname ]
-                                    , ImageList.imageList ImageList.config
+                        Html.div [] [
+                                     ImageList.imageList ImageList.config
                                         (List.map (\img ->  courseImage img ) course.overviewfiles)
+                                          ,Html.h1 [] [ text course.shortname ]
                                     ]
                   ]
             , actions = Nothing
