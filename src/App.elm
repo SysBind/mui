@@ -48,21 +48,23 @@ type alias Model = {
         siteinfo: Maybe SiteInfo
         ,courses: Maybe Courses       
         ,messages: Snackbar.Queue Msg
+        ,currentcourse: Int
         ,debug: Maybe String
     }
 
 
 type Msg = SiteInfoLoaded  (Result Http.Error SiteInfo)
          | CoursesLoaded  (Result Http.Error Courses)
-         | CardClicked
+         | CourseClicked Int
          | SnackbarMsg (Snackbar.Msg Msg)
 
 init : () -> (Model, Cmd Msg)
 init _ =
-  ( { siteinfo = Nothing,
-      courses = Nothing,
-      messages = Snackbar.initialQueue,
-      debug = Nothing
+  ( { siteinfo = Nothing
+    ,courses = Nothing
+    ,messages = Snackbar.initialQueue
+    ,currentcourse = 0
+    ,debug = Nothing
     }
   , siteInfoRequest
   )
@@ -175,8 +177,8 @@ update msg model =
         Err reason ->
             errSnack reason model
                 
-    CardClicked ->
-        ( model, Cmd.none )
+    CourseClicked id ->
+        ( { model | currentcourse = id, debug = Just (String.fromInt id) }, Cmd.none )
 
     SnackbarMsg snackbarMsg ->
         Snackbar.update SnackbarMsg snackbarMsg model.messages
@@ -236,7 +238,7 @@ courseCard course =
             (Card.config |> Card.setOutlined True)
             { blocks =
                   Card.primaryAction
-                  [ Html.Events.onClick CardClicked ]
+                  [ Html.Events.onClick (CourseClicked course.id) ]
                   [ Card.block <|
                         Html.div [] [
                                      ImageList.imageList ImageList.config
@@ -279,6 +281,7 @@ rootView model =
                            (List.map (\c ->  courseCard c ) (justList model.courses))                     
                      ]         
          ]
+        , div [] [ text (printDebug model) ]
         ,Snackbar.snackbar SnackbarMsg Snackbar.config model.messages
         ]
 
