@@ -213,6 +213,17 @@ justList list =
         Just list_ ->
             list_
 
+courseImage : OverviewFile -> ImageListItem.ImageListItem msg
+courseImage image =
+    ImageListItem.imageListItem
+        (ImageListItem.config
+        |> ImageListItem.setAttributes
+             [ style "width" "calc(100% / 5 - 4px)"
+             , style "margin" "2px"
+             ]
+        )
+    (image.fileurl ++ "?token=" ++ authToken)
+              
 courseCard : Course -> Html msg
 courseCard course =
     LayoutGrid.cell [ Elevation.z2 ]
@@ -222,15 +233,7 @@ courseCard course =
                   [ Card.block <|
                         Html.div [] [ Html.h1 [] [ text course.shortname ]
                                     , ImageList.imageList ImageList.config
-                                        [ ImageListItem.imageListItem
-                                              (ImageListItem.config
-                                              |> ImageListItem.setAttributes
-                                                   [ style "width" "calc(100% / 5 - 4px)"
-                                                   , style "margin" "2px"
-                                                   ]
-                                              )
-                                              "http://localhost:8080/webservice/pluginfile.php/26/course/overviewfiles/cat.jpg"
-                                        ]
+                                        (List.map (\img ->  courseImage img ) course.overviewfiles)
                                     ]
                   ]
             , actions = Nothing
