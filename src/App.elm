@@ -5,6 +5,10 @@ import Material.TopAppBar as TopAppBar
 import Material.IconButton as IconButton
 import Material.Snackbar as Snackbar
 import Material.Card as Card
+import Material.LayoutGrid as LayoutGrid
+import Material.Elevation as Elevation
+import Material.List as List
+import Material.List.Item as ListItem
 import Html exposing (..)
 import Html.Attributes exposing (style)
 import Http
@@ -193,14 +197,15 @@ justList list =
 
 courseCard : Course -> Html msg
 courseCard course =
-    Card.card
-    (Card.config |> Card.setOutlined True)
-    { blocks =
-        [ Card.block <|
-            Html.div [] [ Html.h1 [] [ text course.shortname ] ]
-        ]
-    , actions = Nothing
-    }
+    LayoutGrid.cell [ Elevation.z2 ]
+        [(Card.card
+            (Card.config |> Card.setOutlined True)
+            { blocks =
+                  [ Card.block <|
+                        Html.div [] [ Html.h1 [] [ text course.shortname ] ]
+                  ]
+            , actions = Nothing
+            })]
     
                 
 rootView : Model -> Html Msg
@@ -228,11 +233,14 @@ rootView model =
                   ]
               ]              
         ]
-        , div[]
-            (List.map (\c ->  courseCard c ) (justList model.courses))
-        , Snackbar.snackbar SnackbarMsg Snackbar.config model.messages
-
-    ]
+         ,div [ style "padding-top" "128px" ] [
+         LayoutGrid.layoutGrid []
+                     [ LayoutGrid.inner []
+                           (List.map (\c ->  courseCard c ) (justList model.courses))                     
+                     ]         
+         ]
+        ,Snackbar.snackbar SnackbarMsg Snackbar.config model.messages
+        ]
 
 -- MAIN
 
