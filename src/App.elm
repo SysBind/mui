@@ -65,7 +65,7 @@ type alias Model = {
         siteinfo: Maybe SiteInfo
         ,courses: Maybe Courses       
         ,messages: Snackbar.Queue Msg
-        ,currentcourse: Int
+        ,currentcourse: Maybe Course
         ,debug: Maybe String
     }
 
@@ -81,7 +81,7 @@ init _ =
   ( { siteinfo = Nothing
     ,courses = Nothing
     ,messages = Snackbar.initialQueue
-    ,currentcourse = 0
+    ,currentcourse = Nothing
     ,debug = Nothing
     }
   , siteInfoRequest
@@ -206,7 +206,17 @@ errSnack reason model =
     in
         (model, Snackbar.addMessage SnackbarMsg message)
 
-    
+courseById : Courses -> Int -> Maybe Course
+courseById courses id =
+    List.filter (\course -> course.id == id) courses
+        |> List.head
+             
+
+setCourseSections: List Section -> Course -> Course
+setCourseSections secs course =
+    { course | sections = Just secs }
+
+                   
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
@@ -224,13 +234,17 @@ update msg model =
             errSnack reason model
                 
     CourseClicked id ->
-        ( { model | currentcourse = id, debug = Just (String.fromInt id) }, courseContentRequest id )
+        ( { model | currentcourse = courseById (justList model.courses) id }, courseContentRequest id )
 
 
     CourseContentLoaded result ->
         case result of
           Ok sections ->
-              ( { model | debug = Just "Loaded Content" }, Cmd.none )          
+              case model.currentcourse of
+                  Nothing ->
+                      ( model , Cmd.none )
+                  Just course ->
+                      ( { model | currentcourse = Just (course |> setCourseSections sections) }, Cmd.none )          
           Err reason ->
             errSnack reason model
 
@@ -303,42 +317,64 @@ courseCard course =
             , actions = Nothing
             })]
     
-                
+-- Container View            
 rootView : Model -> Html Msg
 rootView model =
-    div [] [
-     TopAppBar.regular (TopAppBar.config |> TopAppBar.setDense True)
-        [ TopAppBar.row []
-              [ TopAppBar.section
-                    [ TopAppBar.alignStart ]
-                    [ IconButton.iconButton
-                          (IconButton.config
-                          |> IconButton.setAttributes [ TopAppBar.navigationIcon ]
-                          )
-                          "menu"
-                    , Html.span [ TopAppBar.title ] [ text (siteName model) ]
-                    ]
-              , TopAppBar.section
-                  [ TopAppBar.alignEnd ]
-                  [  Html.span [ TopAppBar.title ] [ text (userName model) ]
-                  ,IconButton.iconButton
-                      (IconButton.config
-                      |> IconButton.setAttributes [ TopAppBar.actionItem ]
-                      )
-                         "account_box"
-                  ]
-              ]              
-        ]
-         ,div [ style "padding-top" "128px" ] [
-         LayoutGrid.layoutGrid []
-                     [ LayoutGrid.inner []
-                           (List.map (\c ->  courseCard c ) (justList model.courses))                     
-                     ]         
-         ]
-        , div [] [ text (printDebug model) ]
-        ,Snackbar.snackbar SnackbarMsg Snackbar.config model.messages
-        ]
+    let
+        centerView =
+            case model.currentcourse of
+                Nothing ->
+                    homeView
+                Just course ->
+                    courseView
+    in
+        div [] [
+             TopAppBar.regular (TopAppBar.config |> TopAppBar.setDense True)
+                 [ TopAppBar.row []
+                       [ TopAppBar.section
+                             [ TopAppBar.alignStart ]
+                             [ IconButton.iconButton
+                                   (IconButton.config
+                                   |> IconButton.setAttributes [ TopAppBar.navigationIcon ]
+                                   )
+                                   "menu"
+                             , Html.span [ TopAppBar.title ] [ text (siteName model) ]
+                             ]
+                       , TopAppBar.section
+                           [ TopAppBar.alignEnd ]
+                           [  Html.span [ TopAppBar.title ] [ text (userName model) ]
+                           ,IconButton.iconButton
+                               (IconButton.config
+                               |> IconButton.setAttributes [ TopAppBar.actionItem ]
+                               )
+                                  "account_box"
+                           ]
+                       ]              
+                 ]
+            ,div [ style "padding-top" "128px" ] [ centerView model ]
+            , div [] [ text (printDebug model) ]
+            ,Snackbar.snackbar SnackbarMsg Snackbar.config model.messages
+            ]
 
+-- HomeView        
+homeView : Model -> Html Msg
+homeView model =    
+    LayoutGrid.layoutGrid []
+        [ LayoutGrid.inner []
+              (List.map (\c ->  courseCard c ) (justList model.courses))                     
+        ]         
+
+courseView : Model -> Html Msg
+courseView model =
+    case model.currentcourse of
+        Just course ->
+            div []
+            (List.map (\sec ->  div [] [ text sec.name ] ) (justList course.sections))
+        Nothing ->
+            div [] [ text "NO CURRENT COURSE !" ]
+                    
+                    
+           
 -- MAIN
 
 main =
