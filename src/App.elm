@@ -7,12 +7,12 @@ import Material.Snackbar as Snackbar
 import Material.Card as Card
 import Material.LayoutGrid as LayoutGrid
 import Material.Elevation as Elevation
-import Material.List as List
-import Material.List.Item as ListItem
+import Material.List as MDList
+import Material.List.Item as MDListItem
 import Material.ImageList as ImageList
 import Material.ImageList.Item as ImageListItem
 import Html exposing (..)
-import Html.Attributes exposing (style)
+import Html.Attributes exposing (style,src)
 import Html.Events
 import Http
 import Json.Decode exposing (Decoder, field, string, int)
@@ -33,7 +33,9 @@ type alias SiteInfo = {
 -- Course Module
 type alias Module = {
         id: Int
-        ,name: String        
+        ,name: String
+        ,modicon: String
+        ,modplural: String
     }
     
 -- Course Section
@@ -181,7 +183,16 @@ sectionDecoder =
         Section
         (field "id" int)
         (field "name" string)
-        (Json.Decode.succeed [])
+        (field "modules" (Json.Decode.list moduleDecoder) )
+
+moduleDecoder : Decoder Module
+moduleDecoder =
+    Json.Decode.map4
+        Module
+            (field "id" int)
+            (field "name" string)
+            (field "modicon" string)
+            (field "modplural" string)
 
 errSnack : Http.Error -> Model -> (Model, Cmd Msg)
 errSnack reason model =
@@ -363,18 +374,42 @@ homeView model =
         [ LayoutGrid.inner []
               (List.map (\c ->  courseCard c ) (justList model.courses))                     
         ]         
-
+        
 courseView : Model -> Html Msg
 courseView model =
     case model.currentcourse of
         Just course ->
-            div []
-            (List.map (\sec ->  div [] [ text sec.name ] ) (justList course.sections))
+            Html.div [] [
+                 ImageList.imageList ImageList.config
+                     (List.map (\img ->  courseImage img ) course.overviewfiles)
+                ,Html.h1 [] [ text course.shortname ]                            
+                ,div []
+                (List.map (\sec ->  div [] [ sectionView sec ] ) (justList course.sections))
+                ]
         Nothing ->
             div [] [ text "NO CURRENT COURSE !" ]
                     
-                    
-           
+                
+sectionView : Section -> Html Msg
+sectionView section =
+    div [] [
+    Html.h2 [] [text section.name]
+        ,MDList.list (MDList.config
+                     |> MDList.setTwoLine True
+                     |> MDList.setAvatarList True)
+        (List.map (\mod ->  moduleView mod) section.modules)]
+
+moduleView : Module -> MDListItem.ListItem Msg
+moduleView mod =
+    MDListItem.listItem MDListItem.config
+        [
+         MDListItem.graphic [] [ Html.img [ src mod.modicon  ] [] ] 
+        ,MDListItem.text []
+              { primary = [ text mod.name ]
+              , secondary = [ text mod.modplural ]
+            }            
+        ]
+    
 -- MAIN
 
 main =
