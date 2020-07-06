@@ -360,7 +360,11 @@ rootView model =
                            ]
                        ]              
                  ]
-            ,div [ style "padding-top" "128px" ] [ centerView model ]
+            ,div [ style "padding-top" "128px"
+                 , style "width" "100%"
+                 , style "max-width" "1200px"
+                 , style "margin" "0 auto"
+                 ] [ centerView model ]
             , div [] [ text (printDebug model) ]
             ,Snackbar.snackbar ( Snackbar.config  { onClosed = SnackbarClosed } ) model.messages
             ]
@@ -381,8 +385,10 @@ courseView model =
                  ImageList.imageList ImageList.config
                      (List.map (\img ->  courseImage img ) course.overviewfiles)
                 ,Html.h1 [] [ text course.shortname ]                            
-                ,div []
-                (List.map (\sec ->  div [] [ sectionView sec ] ) (justList course.sections))
+                ,LayoutGrid.layoutGrid []
+                     [ LayoutGrid.inner []
+                           (List.map (\sec ->  sectionView sec ) (justList course.sections))
+                     ]
                 ]
         Nothing ->
             div [] [ text "NO CURRENT COURSE !" ]
@@ -390,19 +396,23 @@ courseView model =
                 
 sectionView : Section -> Html Msg
 sectionView section =
-    case section.modules of
-        [] ->
-            Html.h2 [] [text section.name]
-
-        x :: xs ->            
-            div [] [
-                 Html.h2 [] [text section.name]
-                ,MDList.list (MDList.config
-                             |> MDList.setTwoLine True
-                             |> MDList.setAvatarList True)
-                     (moduleView x)
-                     (List.map (\mod ->  moduleView mod) xs)
-                ]
+    let
+        content =
+            case section.modules of
+                [] ->
+                    Html.h5 [] [text section.name]
+                        
+                x :: xs ->       
+                    div [] [
+                         Html.h5 [] [text section.name]
+                        ,MDList.list (MDList.config
+                                     |> MDList.setTwoLine True
+                                     |> MDList.setAvatarList True)
+                             (moduleView x)
+                             (List.map (\mod ->  moduleView mod) xs)
+                        ]
+    in
+        LayoutGrid.cell [ Elevation.z2, LayoutGrid.span4 ] [ content ]
 
 moduleView : Module -> MDListItem.ListItem Msg
 moduleView mod =
