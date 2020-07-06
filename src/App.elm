@@ -29,17 +29,34 @@ type alias SiteInfo = {
         ,userid: Int
     }
 
+
+-- Course Module
+type alias Module = {
+        id: Int
+        ,name: String        
+    }
+    
+-- Course Section
+type alias Section =  {
+        id: Int
+        ,name: String
+        ,modules: List Module
+    }
+
+-- Course Image (called overview file in API)
 type alias OverviewFile = {
         filename: String
         ,fileurl: String
         ,mimetype: String
     }
+
     
 type alias Course = {
         id: Int
         ,shortname: String
         ,fullname: String
         ,overviewfiles: List OverviewFile
+        ,sections: Maybe (List Section)
     }
 
 type alias Courses = List Course
@@ -56,6 +73,7 @@ type alias Model = {
 type Msg = SiteInfoLoaded  (Result Http.Error SiteInfo)
          | CoursesLoaded  (Result Http.Error Courses)
          | CourseClicked Int
+         | CourseContentLoaded (Result Http.Error (List Section))
          | SnackbarMsg (Snackbar.Msg Msg)
 
 init : () -> (Model, Cmd Msg)
@@ -116,12 +134,13 @@ courseListRequest userid =
 
 courseDecoder : Decoder Course
 courseDecoder =
-    Json.Decode.map4
+    Json.Decode.map5
         Course
         (field "id" int)
         (field "shortname" string)
         (field "fullname" string)
         (field "overviewfiles" (Json.Decode.list overviewfileDecoder))
+        (Json.Decode.succeed Nothing)
 
 overviewfileDecoder : Decoder OverviewFile
 overviewfileDecoder =
@@ -136,7 +155,34 @@ courseListDecoder =
     Json.Decode.list courseDecoder
 
 
-        
+-- courseContentRequest - Fetch course sections and modules
+courseContentRequest : Int -> (Cmd Msg)
+courseContentRequest courseid =         
+          Http.request
+              { method = "GET"
+              , headers = [ Http.header "CONTENT_TYPE" "application/urlencoded"
+                          , Http.header "ACCEPT" "application/json"
+                          , Http.header "AUTHORIZATION" authToken ]
+              , url = "http://localhost:8080/webservice/restful/server.php/core_course_get_contents?courseid=" ++ String.fromInt courseid
+              , body = Http.emptyBody
+              , expect = Http.expectJson CourseContentLoaded courseContentDecoder
+              , timeout = Nothing
+              , tracker = Nothing
+              }        
+
+
+courseContentDecoder : Decoder (List Section)
+courseContentDecoder =
+    Json.Decode.list sectionDecoder
+
+sectionDecoder : Decoder Section
+sectionDecoder =
+    Json.Decode.map3
+        Section
+        (field "id" int)
+        (field "name" string)
+        (Json.Decode.succeed [])
+
 errSnack : Http.Error -> Model -> (Model, Cmd Msg)
 errSnack reason model =
     let
@@ -178,7 +224,15 @@ update msg model =
             errSnack reason model
                 
     CourseClicked id ->
-        ( { model | currentcourse = id, debug = Just (String.fromInt id) }, Cmd.none )
+        ( { model | currentcourse = id, debug = Just (String.fromInt id) }, courseContentRequest id )
+
+
+    CourseContentLoaded result ->
+        case result of
+          Ok sections ->
+              ( { model | debug = Just "Loaded Content" }, Cmd.none )          
+          Err reason ->
+            errSnack reason model
 
     SnackbarMsg snackbarMsg ->
         Snackbar.update SnackbarMsg snackbarMsg model.messages
