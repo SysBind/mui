@@ -37,7 +37,13 @@ type alias Module = {
         ,modicon: String
         ,modplural: String
     }
-    
+
+type alias ModuleCompletion = {
+        cmid: Int
+        ,modname: String
+        ,state: Bool
+    }
+
 -- Course Section
 type alias Section =  {
         id: Int
@@ -59,6 +65,7 @@ type alias Course = {
         ,fullname: String
         ,overviewfiles: List OverviewFile
         ,sections: Maybe (List Section)
+        ,statuses: List ModuleCompletion
     }
 
 type alias Courses = List Course
@@ -72,6 +79,7 @@ type alias Model = {
     }
 
 
+-- Messages    
 type Msg = SiteInfoLoaded  (Result Http.Error SiteInfo)
          | CoursesLoaded  (Result Http.Error Courses)
          | CourseClicked Int
@@ -136,13 +144,14 @@ courseListRequest userid =
 
 courseDecoder : Decoder Course
 courseDecoder =
-    Json.Decode.map5
+    Json.Decode.map6
         Course
         (field "id" int)
         (field "shortname" string)
         (field "fullname" string)
         (field "overviewfiles" (Json.Decode.list overviewfileDecoder))
         (Json.Decode.succeed Nothing)
+        (Json.Decode.succeed [])
 
 overviewfileDecoder : Decoder OverviewFile
 overviewfileDecoder =
@@ -194,6 +203,29 @@ moduleDecoder =
             (field "modicon" string)
             (field "modplural" string)
 
+-- moduleCompletionRequest
+moduleCompletionRequest : (Maybe SiteInfo) -> Courses  -> (Cmd Msg)
+moduleCompletionRequest siteinfo courses =
+    case siteinfo of
+        Nothing ->
+            Cmd.none
+        Just siteInfo ->
+            Cmd.batch
+                (List.map (\course ->
+                  Http.request
+                  { method = "GET"
+                  , headers = [ Http.header "CONTENT_TYPE" "application/urlencoded"
+                              , Http.header "ACCEPT" "application/json"
+                              , Http.header "AUTHORIZATION" authToken ]
+                  , url = "http://localhost:8080/webservice/restful/server.php/core_completion_get_activities_completion_status?userid=" ++ String.fromInt siteInfo.userid ++ "&courseid=" ++ String.fromInt course.id
+                  , body = Http.emptyBody
+                  , expect = Http.expectJson CourseContentLoaded courseContentDecoder
+                  , timeout = Nothing
+                  , tracker = Nothing
+                  })
+                courses)
+        
+                          
 errSnack : Http.Error -> Model -> (Model, Cmd Msg)
 errSnack reason model =
     let
@@ -240,7 +272,7 @@ update msg model =
     CoursesLoaded result ->
       case result of
         Ok courses ->
-           ( { model | courses = Just courses }, Cmd.none )          
+           ( { model | courses = Just courses }, moduleCompletionRequest model.siteinfo courses )
         Err reason ->
             errSnack reason model
                 
@@ -384,7 +416,7 @@ courseView model =
             Html.div [] [
                  ImageList.imageList ImageList.config
                      (List.map (\img ->  courseImage img ) course.overviewfiles)
-                ,Html.h1 [] [ text course.shortname ]                            
+                ,Html.h2 [ style "user-select" "none" ] [ text course.shortname ]                            
                 ,LayoutGrid.layoutGrid []
                      [ LayoutGrid.inner []
                            (List.map (\sec ->  sectionView sec ) (justList course.sections))
@@ -400,11 +432,11 @@ sectionView section =
         content =
             case section.modules of
                 [] ->
-                    Html.h5 [] [text section.name]
+                    div [] []
                         
                 x :: xs ->       
                     div [] [
-                         Html.h5 [] [text section.name]
+                         Html.h3 [ style "user-select" "none" ] [text section.name]
                         ,MDList.list (MDList.config
                                      |> MDList.setTwoLine True
                                      |> MDList.setAvatarList True)
@@ -419,7 +451,7 @@ moduleView mod =
     MDListItem.listItem MDListItem.config
         [
          MDListItem.graphic [] [ Html.img [ src mod.modicon  ] [] ] 
-        ,MDListItem.text []
+        ,MDListItem.text [style "user-select" "none"]
               { primary = [ text mod.name ]
               , secondary = [ text mod.modplural ]
             }            
