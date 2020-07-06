@@ -76,7 +76,7 @@ type Msg = SiteInfoLoaded  (Result Http.Error SiteInfo)
          | CoursesLoaded  (Result Http.Error Courses)
          | CourseClicked Int
          | CourseContentLoaded (Result Http.Error (List Section))
-         | SnackbarMsg (Snackbar.Msg Msg)
+         | SnackbarClosed Snackbar.MessageId
 
 init : () -> (Model, Cmd Msg)
 init _ =
@@ -200,22 +200,22 @@ errSnack reason model =
         message =
             case reason of
                 Http.BadUrl str ->
-                    Snackbar.message
-                        |> Snackbar.setLabel (Just ("BADURL " ++ str))
+                    Snackbar.message ("BADURL " ++ str)
+                        |> Snackbar.setTimeoutMs (Just 4000)
                 Http.Timeout ->
-                    Snackbar.message
-                        |> Snackbar.setLabel (Just "TIMEOUT")
+                    Snackbar.message "TIMEOUT"
+                        |> Snackbar.setTimeoutMs (Just 4000)
                 Http.NetworkError ->
-                    Snackbar.message
-                        |> Snackbar.setLabel (Just "NETWORKERROR")
+                    Snackbar.message "NETWORKERROR"
+                        |> Snackbar.setTimeoutMs (Just 4000)
                 Http.BadStatus status ->
-                    Snackbar.message
-                        |> Snackbar.setLabel (Just ("BADSTATUS " ++ String.fromInt status))
+                    Snackbar.message ("BADSTATUS " ++ String.fromInt status)
+                        |> Snackbar.setTimeoutMs (Just 4000)
                 Http.BadBody str ->
-                    Snackbar.message
-                        |> Snackbar.setLabel (Just ("BADBODY " ++ str))
+                    Snackbar.message ("BADBODY " ++ str)
+                        |> Snackbar.setTimeoutMs (Just 4000)
     in
-        (model, Snackbar.addMessage SnackbarMsg message)
+        ({model | messages = Snackbar.addMessage message model.messages, debug=Just "http error"}, Cmd.none)
 
 courseById : Courses -> Int -> Maybe Course
 courseById courses id =
@@ -258,10 +258,8 @@ update msg model =
                       ( { model | currentcourse = Just (course |> setCourseSections sections) }, Cmd.none )          
           Err reason ->
             errSnack reason model
-
-    SnackbarMsg snackbarMsg ->
-        Snackbar.update SnackbarMsg snackbarMsg model.messages
-                |> Tuple.mapFirst (\queue -> { model | messages = queue })
+    SnackbarClosed msgid ->
+        ({ model | messages = Snackbar.close msgid model.messages }, Cmd.none )
 
 -- VIEW                        
 
@@ -364,7 +362,7 @@ rootView model =
                  ]
             ,div [ style "padding-top" "128px" ] [ centerView model ]
             , div [] [ text (printDebug model) ]
-            ,Snackbar.snackbar SnackbarMsg Snackbar.config model.messages
+            ,Snackbar.snackbar ( Snackbar.config  { onClosed = SnackbarClosed } ) model.messages
             ]
 
 -- HomeView        
@@ -392,12 +390,19 @@ courseView model =
                 
 sectionView : Section -> Html Msg
 sectionView section =
-    div [] [
-    Html.h2 [] [text section.name]
-        ,MDList.list (MDList.config
-                     |> MDList.setTwoLine True
-                     |> MDList.setAvatarList True)
-        (List.map (\mod ->  moduleView mod) section.modules)]
+    case section.modules of
+        [] ->
+            Html.h2 [] [text section.name]
+
+        x :: xs ->            
+            div [] [
+                 Html.h2 [] [text section.name]
+                ,MDList.list (MDList.config
+                             |> MDList.setTwoLine True
+                             |> MDList.setAvatarList True)
+                     (moduleView x)
+                     (List.map (\mod ->  moduleView mod) xs)
+                ]
 
 moduleView : Module -> MDListItem.ListItem Msg
 moduleView mod =
