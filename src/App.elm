@@ -56,8 +56,8 @@ type alias Model = {
 type Msg = SiteInfoLoaded  (Result Http.Error SiteInfo)
          | CoursesLoaded  (Result Http.Error Courses)
          | CourseClicked Int
-         | SnackbarMsg (Snackbar.Msg Msg)
-
+         | SnackbarClosed Snackbar.MessageId
+ 
 init : () -> (Model, Cmd Msg)
 init _ =
   ( { siteinfo = Nothing
@@ -143,22 +143,22 @@ errSnack reason model =
         message =
             case reason of
                 Http.BadUrl str ->
-                    Snackbar.message
-                        |> Snackbar.setLabel (Just ("BADURL " ++ str))
+                    Snackbar.message ("BADURL " ++ str)
+                        |> Snackbar.setTimeoutMs (Just 4000)
                 Http.Timeout ->
-                    Snackbar.message
-                        |> Snackbar.setLabel (Just "TIMEOUT")
+                    Snackbar.message "TIMEOUT"
+                        |> Snackbar.setTimeoutMs (Just 4000)
                 Http.NetworkError ->
-                    Snackbar.message
-                        |> Snackbar.setLabel (Just "NETWORKERROR")
+                    Snackbar.message "NETWORKERROR"
+                        |> Snackbar.setTimeoutMs (Just 4000)
                 Http.BadStatus status ->
-                    Snackbar.message
-                        |> Snackbar.setLabel (Just ("BADSTATUS " ++ String.fromInt status))
+                    Snackbar.message ("BADSTATUS " ++ String.fromInt status)
+                        |> Snackbar.setTimeoutMs (Just 4000)
                 Http.BadBody str ->
-                    Snackbar.message
-                        |> Snackbar.setLabel (Just ("BADBODY " ++ str))
+                    Snackbar.message ("BADBODY " ++ str)
+                        |> Snackbar.setTimeoutMs (Just 4000)
     in
-        (model, Snackbar.addMessage SnackbarMsg message)
+        ({model | messages = Snackbar.addMessage message model.messages, debug=Just "http error"}, Cmd.none)
 
     
 update : Msg -> Model -> (Model, Cmd Msg)
@@ -180,9 +180,8 @@ update msg model =
     CourseClicked id ->
         ( { model | currentcourse = id, debug = Just (String.fromInt id) }, Cmd.none )
 
-    SnackbarMsg snackbarMsg ->
-        Snackbar.update SnackbarMsg snackbarMsg model.messages
-                |> Tuple.mapFirst (\queue -> { model | messages = queue })
+    SnackbarClosed msgid ->
+        ({ model | messages = Snackbar.close msgid model.messages }, Cmd.none )
 
 -- VIEW                        
 
@@ -249,7 +248,11 @@ courseCard course =
             , actions = Nothing
             })]
     
-                
+
+{-- show course list or current course if selected --}            
+-- centerView : Model -> Html Msg
+             
+              
 rootView : Model -> Html Msg
 rootView model =
     div [] [
@@ -282,7 +285,7 @@ rootView model =
                      ]         
          ]
         , div [] [ text (printDebug model) ]
-        ,Snackbar.snackbar SnackbarMsg Snackbar.config model.messages
+        ,Snackbar.snackbar ( Snackbar.config  { onClosed = SnackbarClosed } ) model.messages
         ]
 
 -- MAIN
