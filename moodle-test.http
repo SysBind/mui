@@ -2,7 +2,7 @@
 
 
 # GET Request with Body
-GET http://localhost:8080/webservice/restful/server.php/core_course_get_courses
+GET http://localhost:8000/webservice/restful/server.php/core_course_get_courses
 AUTHORIZATION: 8410c8268bfa0a3dc1e0ed8fb15aed86
 CONTENT_TYPE: application/json
 ACCEPT: application/json
@@ -12,7 +12,7 @@ ACCEPT: application/json
 
 
 # GET with URL Encoded params
-GET http://localhost:8080/webservice/restful/server.php/core_course_get_courses?options[ids][]=1
+GET http://localhost:8000/webservice/restful/server.php/core_course_get_courses?options[ids][]=1
 AUTHORIZATION: 8410c8268bfa0a3dc1e0ed8fb15aed86
 ACCEPT: application/json
 CONTENT_TYPE: application/urlencoded
@@ -20,32 +20,32 @@ CONTENT_TYPE: application/urlencoded
 
 
 # Site Info
-GET http://localhost:8080/webservice/restful/server.php/core_webservice_get_site_info?serviceshortnames[]=x
-AUTHORIZATION: 8410c8268bfa0a3dc1e0ed8fb15aed86
+GET http://localhost:8000/webservice/restful/server.php/core_webservice_get_site_info?serviceshortnames[]=x
+AUTHORIZATION: 1d2bad20a3fee88082abc23cc9557a69
 ACCEPT: application/json
 CONTENT_TYPE: application/urlencoded
 
 
 # core_enrol_get_users_courses
-GET http://localhost:8080/webservice/restful/server.php/core_enrol_get_users_courses?userid=2
+GET http://localhost:8000/webservice/restful/server.php/core_enrol_get_users_courses?userid=2
 AUTHORIZATION: 8410c8268bfa0a3dc1e0ed8fb15aed86
 ACCEPT: application/json
 CONTENT_TYPE: application/urlencoded
 
 # core_course_get_contents
-GET http://localhost:8080/webservice/restful/server.php/core_course_get_contents?courseid=2
+GET http://localhost:8000/webservice/restful/server.php/core_course_get_contents?courseid=2
 AUTHORIZATION: 8410c8268bfa0a3dc1e0ed8fb15aed86
 ACCEPT: application/json
 CONTENT_TYPE: application/urlencoded
 
 # core_completion_get_activities_completion_status
-GET http://localhost:8080/webservice/restful/server.php/core_completion_get_activities_completion_status?courseid=2&userid=3
+GET http://localhost:8000/webservice/restful/server.php/core_completion_get_activities_completion_status?courseid=2&userid=3
 AUTHORIZATION: 8410c8268bfa0a3dc1e0ed8fb15aed86
 ACCEPT: application/json
 CONTENT_TYPE: application/urlencoded
 
 # core_completion_get_course_completion_status
-GET http://localhost:8080/webservice/restful/server.php/core_completion_get_course_completion_status?courseid=3&userid=3
+GET http://localhost:8000/webservice/restful/server.php/core_completion_get_course_completion_status?courseid=3&userid=3
 AUTHORIZATION: 8410c8268bfa0a3dc1e0ed8fb15aed86
 ACCEPT: application/json
 CONTENT_TYPE: application/urlencoded

@@ -10,7 +10,7 @@ moodle/
 install the Restful plugin for moodle:
 https://github.com/SysBind/moodle-webservice_restful
 
-under moodle/webservices
+under moodle/webservices/restful
 
 inside moodle code directory:
 ```php -S 0.0.0.0:8080```

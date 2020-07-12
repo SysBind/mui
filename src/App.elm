@@ -18,7 +18,9 @@ import Http
 import Json.Decode exposing (Decoder, field, string, int)
 
 
-authToken = "8410c8268bfa0a3dc1e0ed8fb15aed86"
+-- authToken = "8410c8268bfa0a3dc1e0ed8fb15aed86"
+authToken = "1d2bad20a3fee88082abc23cc9557a69"
+moodleEndpoint = "http://localhost:8000/webservice/restful/server.php"
 
 -- MODEL
 
@@ -110,7 +112,7 @@ siteInfoRequest =
               , headers = [ Http.header "CONTENT_TYPE" "application/urlencoded"
                           , Http.header "ACCEPT" "application/json"
                           , Http.header "AUTHORIZATION" authToken ]
-              , url = "http://localhost:8080/webservice/restful/server.php/core_webservice_get_site_info?serviceshortnames[]=x"
+              , url = moodleEndpoint ++ "/core_webservice_get_site_info?serviceshortnames[]=x"
               , body = Http.emptyBody
               , expect = Http.expectJson SiteInfoLoaded siteInfoDecoder
               , timeout = Nothing
@@ -135,7 +137,7 @@ courseListRequest userid =
               , headers = [ Http.header "CONTENT_TYPE" "application/urlencoded"
                           , Http.header "ACCEPT" "application/json"
                           , Http.header "AUTHORIZATION" authToken ]
-              , url = "http://localhost:8080/webservice/restful/server.php/core_enrol_get_users_courses?userid=" ++ String.fromInt userid
+              , url = moodleEndpoint ++ "/core_enrol_get_users_courses?userid=" ++ String.fromInt userid
               , body = Http.emptyBody
               , expect = Http.expectJson CoursesLoaded courseListDecoder
               , timeout = Nothing
@@ -174,7 +176,7 @@ courseContentRequest courseid =
               , headers = [ Http.header "CONTENT_TYPE" "application/urlencoded"
                           , Http.header "ACCEPT" "application/json"
                           , Http.header "AUTHORIZATION" authToken ]
-              , url = "http://localhost:8080/webservice/restful/server.php/core_course_get_contents?courseid=" ++ String.fromInt courseid
+              , url = moodleEndpoint ++ "/core_course_get_contents?courseid=" ++ String.fromInt courseid
               , body = Http.emptyBody
               , expect = Http.expectJson CourseContentLoaded courseContentDecoder
               , timeout = Nothing
@@ -217,7 +219,7 @@ moduleCompletionRequest siteinfo courses =
                   , headers = [ Http.header "CONTENT_TYPE" "application/urlencoded"
                               , Http.header "ACCEPT" "application/json"
                               , Http.header "AUTHORIZATION" authToken ]
-                  , url = "http://localhost:8080/webservice/restful/server.php/core_completion_get_activities_completion_status?userid=" ++ String.fromInt siteInfo.userid ++ "&courseid=" ++ String.fromInt course.id
+                  , url = moodleEndpoint ++ "/core_completion_get_activities_completion_status?userid=" ++ String.fromInt siteInfo.userid ++ "&courseid=" ++ String.fromInt course.id
                   , body = Http.emptyBody
                   , expect = Http.expectJson CourseContentLoaded courseContentDecoder
                   , timeout = Nothing
