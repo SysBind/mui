@@ -15,11 +15,11 @@ import Html exposing (..)
 import Html.Attributes exposing (style,src)
 import Html.Events
 import Http
-import Json.Decode exposing (Decoder, field, string, int)
+import Json.Decode exposing (Decoder, field, string, int, bool)
 
 
--- authToken = "8410c8268bfa0a3dc1e0ed8fb15aed86"
-authToken = "1d2bad20a3fee88082abc23cc9557a69"
+authToken = "8410c8268bfa0a3dc1e0ed8fb15aed86"
+-- authToken = "1d2bad20a3fee88082abc23cc9557a69"
 moodleEndpoint = "http://localhost:8000/webservice/restful/server.php"
 
 -- MODEL
@@ -43,7 +43,7 @@ type alias Module = {
 type alias ModuleCompletion = {
         cmid: Int
         ,modname: String
-        ,state: Bool
+        ,state: Int
     }
 
 -- Course Section
@@ -86,6 +86,7 @@ type Msg = SiteInfoLoaded  (Result Http.Error SiteInfo)
          | CoursesLoaded  (Result Http.Error Courses)
          | CourseClicked Int
          | CourseContentLoaded (Result Http.Error (List Section))
+         | ModuleCompletionLoaded (Result Http.Error (List ModuleCompletion))
          | SnackbarClosed Snackbar.MessageId
 
 init : () -> (Model, Cmd Msg)
@@ -205,6 +206,18 @@ moduleDecoder =
             (field "modicon" string)
             (field "modplural" string)
 
+moduleCompletionListDecoder : Decoder (List ModuleCompletion)
+moduleCompletionListDecoder =
+    field "statuses" (Json.Decode.list moduleCompletionDecoder)
+
+moduleCompletionDecoder : Decoder ModuleCompletion
+moduleCompletionDecoder =
+    Json.Decode.map3
+        ModuleCompletion
+            (field "cmid" int)
+            (field "modname" string)
+            (field "state" int)
+
 -- moduleCompletionRequest
 moduleCompletionRequest : (Maybe SiteInfo) -> Courses  -> (Cmd Msg)
 moduleCompletionRequest siteinfo courses =
@@ -221,7 +234,7 @@ moduleCompletionRequest siteinfo courses =
                               , Http.header "AUTHORIZATION" authToken ]
                   , url = moodleEndpoint ++ "/core_completion_get_activities_completion_status?userid=" ++ String.fromInt siteInfo.userid ++ "&courseid=" ++ String.fromInt course.id
                   , body = Http.emptyBody
-                  , expect = Http.expectJson CourseContentLoaded courseContentDecoder
+                  , expect = Http.expectJson ModuleCompletionLoaded moduleCompletionListDecoder
                   , timeout = Nothing
                   , tracker = Nothing
                   })
@@ -289,13 +302,24 @@ update msg model =
                   Nothing ->
                       ( model , Cmd.none )
                   Just course ->
-                      ( { model | currentcourse = Just (course |> setCourseSections sections) }, Cmd.none )          
+                      ( { model | currentcourse = Just (course |> setCourseSections sections) }, Cmd.none )
+          Err reason ->
+            errSnack reason model                          
+
+{--    ModuleCompletionLoaded result ->
+        case result of
+          Ok statuses ->
+              ( { model | debug = Just ("Module Completion Loaded")}, Cmd.none )
           Err reason ->
             errSnack reason model
+--}
     SnackbarClosed msgid ->
-        ({ model | messages = Snackbar.close msgid model.messages }, Cmd.none )
+        ( { model | messages = Snackbar.close msgid model.messages }, Cmd.none )
+    _ ->
+        Debug.log "handle Captain and Seagull" (model, Cmd.none)
 
--- VIEW                        
+
+-- VIEW
 
 siteName : Model -> String
 siteName model =
